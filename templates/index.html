@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet"
+     href="{{ url_for('static', filename='style.css') }}">
+    <title>Coletor de Preços</title>
+</head>
+<body>
+<div class="container-home">
+    <h1>Comparador de Preços</h1>
+
+    <form action="/buscar" method="POST" id="form-busca">
+ 
+        <input
+            type="text"
+            name="produto"
+            placeholder="Digite o produto"
+            required
+        >
+        <button type="submit">
+            Pesquisar
+        </button>
+    </form>
+
+    <div id="loading" style="display:none;">
+        <div class="spinner"></div>
+        <h3>⏳ Buscando os melhores preços...</h3>
+        <p>Aguarde alguns segundos.</p>
+    </div>
+
+</div> 
+
+<script>
+
+window.onload = function() {
+
+    const formulario =
+        document.getElementById("form-busca");
+
+    if(formulario){
+
+        formulario.addEventListener(
+            "submit",
+            function(){
+
+                document
+                    .getElementById("loading")
+                    .style.display = "block";
+
+            }
+        );
+
+    }
+
+};
+
+</script>
+
+
+</body>
+</html>

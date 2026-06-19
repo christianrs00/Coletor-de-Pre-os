@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+        <link
+            rel="stylesheet"
+            href="{{ url_for('static', filename='style.css') }}"
+        >
+
+        <title>Resultados</title>
+
+        </head>
+
+        <body>
+
+        <h1>Resultado da Pesquisa</h1>
+
+        <h2>{{ produto }}</h2>
+
+        {% if encontrou %}
+
+        <div class="melhor-oferta">
+
+            <h2>🏆 Melhor Oferta</h2>
+
+            {% if resultados[0][1] == "Kabum" %}
+
+            <img
+                src="{{ url_for('static', filename='logos/kabum.png') }}"
+                class="logo-loja"
+            >
+
+            {% elif resultados[0][1] == "Terabyte" %}
+
+            <img
+                src="{{ url_for('static', filename='logos/terabyte.png') }}"
+                class="logo-loja"
+            >
+
+            {% endif %}
+
+            <h3>{{ resultados[0][0] }}</h3>
+
+            <p>
+                Loja:
+                {{ resultados[0][1] }}
+            </p>
+
+            <p class="preco">
+                R$ {{ "%.2f"|format(resultados[0][2]) }}
+            </p>
+
+            {% if resultados|length > 1 %}
+
+            <p class="economia">
+
+                Economia de R$ {{"%.2f"|format(economia)}}
+
+            </p>
+
+            {% endif %}
+
+            <a
+                href="{{ resultados[0][3] }}"
+                target="_blank"
+                class="link-produto"
+            >
+                Abrir Oferta
+            </a>
+
+        </div>
+
+        <div class="filtros">
+
+            <button
+                class="btn-filtro ativo"
+                onclick="ativarFiltro(this, 'todas')"
+            >
+                Todas
+            </button>
+
+            <button
+                class="btn-filtro"
+                onclick="ativarFiltro(this, 'Kabum')"
+            >
+                Kabum
+            </button>
+
+            <button
+                class="btn-filtro"
+                onclick="ativarFiltro(this, 'Terabyte')"
+            >
+                Terabyte
+            </button>
+
+        </div>
+        <h2>🛒 Ofertas Encontradas</h2>
+        <p class="total-ofertas">
+            {{ resultados|length }} ofertas encontradas
+        </p>
+
+        <div class="cards-container">
+
+            {% for item in resultados %}
+
+            <div class="card" data-loja="{{ item[1] }}">
+
+                <div class="loja-container">
+
+                    {% if item[1] == "Kabum" %}
+
+                    <img
+                        src="{{ url_for('static', filename='logos/kabum.png') }}"
+                        class="logo-loja"
+                    >
+
+                    {% elif item[1] == "Terabyte" %}
+
+                    <img
+                        src="{{ url_for('static', filename='logos/terabyte.png') }}"
+                        class="logo-loja"
+                    >
+
+                    {% endif %}
+
+                </div>
+
+                <h3>{{ item[0] }}</h3>
+
+                <p class="preco">
+                    R$ {{ "%.2f"|format(item[2]) }}
+                </p>
+
+                <a
+                    href="{{ item[3] }}"
+                    target="_blank"
+                    class="link-produto"
+                >
+                    Ver Produto
+                </a>
+
+            </div>
+
+            {% endfor %}
+
+        </div>
+
+        {% if historico|length > 0 %}
+
+        <div class="grafico-container">
+
+            <h2>Histórico de Preços</h2>
+
+            <p>
+                Total histórico:
+                {{ historico|length }}
+            </p>
+
+            <canvas id="grafico"></canvas>
+
+        </div>
+
+        {% endif %}
+
+        {% else %}
+
+        <h2>Nenhum produto encontrado.</h2>
+
+        {% endif %}
+
+        <br>
+
+        <a href="/">
+            Nova Pesquisa
+        </a>
+
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+        <script>
+
+        const labels = [
+            {% for item in historico %}
+                "{{ item[0] }}",
+            {% endfor %}
+        ];
+
+        const valores = [
+            {% for item in historico %}
+                {{ item[1] }},
+            {% endfor %}
+        ];
+
+        const canvas = document.getElementById("grafico");
+
+        if (canvas && valores.length > 0) {
+
+            new Chart(
+                canvas,
+                {
+                    type: "line",
+
+                    data: {
+
+                        labels: labels,
+
+                        datasets: [{
+
+                            label: "Menor Preço",
+
+                            data: valores,
+
+                            borderWidth: 3,
+
+                            tension: 0.3,
+
+                            fill: false
+
+                        }]
+                    },
+
+                    options: {
+
+                        responsive: true,
+
+                        plugins: {
+
+                            legend: {
+                                display: true
+                            }
+
+                        }
+
+                    }
+
+                }
+            );
+
+        }
+
+        </script>
+
+    <script>
+
+    function filtrarLoja(loja){
+
+        const cards =
+            document.querySelectorAll(".card");
+
+        cards.forEach(function(card){
+
+            if(
+                loja === "todas" ||
+                card.dataset.loja === loja
+            ){
+                card.style.display = "block";
+            }
+            else{
+                card.style.display = "none";
+            }
+
+        });
+
+    }
+
+    function ativarFiltro(botao, loja){
+
+        document
+            .querySelectorAll(".btn-filtro")
+            .forEach(btn => {
+                btn.classList.remove("ativo");
+            });
+
+        botao.classList.add("ativo");
+
+        filtrarLoja(loja);
+
+    }
+
+    </script>
+
+</body>
+
+</html>
