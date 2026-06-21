@@ -21,7 +21,8 @@ def criar_tabelas():
             loja TEXT,
             preco REAL,
             link TEXT,
-            data_coleta DATETIME DEFAULT CURRENT_TIMESTAMP
+            data_coleta DATETIME DEFAULT CURRENT_TIMESTAMP,
+            ultima_verificacao DATETIME DEFAULT CURRENT_TIMESTAMP
         )
     """)
      # Índice para busca por código
@@ -88,219 +89,6 @@ def salvar_produto(codigo, nome, loja, preco, link):
 
     return True
 
-#def menores_precos():
-    
-    conn = conectar()
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        SELECT
-            nome,
-            loja,
-            link,
-            MIN(preco)
-        FROM produtos
-        GROUP BY nome, loja
-        ORDER BY MIN(preco)
-    """)
-
-    dados = cursor.fetchall()
-
-    conn.close()
-
-    return dados
-
-#def comparar_produto(termo):
-
-    termo = normalizar_nome(termo)
-
-    conn = conectar()
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        SELECT
-            nome,
-            loja,
-            MIN(preco)
-            FROM produtos
-            WHERE nome_normalizado LIKE ?
-            GROUP BY nome_normalizado, loja
-            ORDER BY MIN(preco)
-    """, (f"%{termo}%",))
-
-    dados = cursor.fetchall()
-
-    conn.close()
-
-    return dados
-
-
-#def comparar_normalizado(termo):
-    
-    conn = conectar()
-    cursor = conn.cursor()
-
-    termo = normalizar_nome(termo)
-
-    cursor.execute("""
-        SELECT
-            nome_normalizado,
-            loja,
-            MIN(preco)
-        FROM produtos
-        WHERE nome_normalizado LIKE ?
-        GROUP BY nome_normalizado, loja
-        ORDER BY MIN(preco)
-    """, (f"%{termo}%",))
-
-    dados = cursor.fetchall()
-
-    conn.close()
-
-    return dados
-
-#def ranking_precos(termo):
-
-    conn = conectar()
-    cursor = conn.cursor()
-
-    termo = normalizar_nome(termo)
-
-    cursor.execute("""
-        SELECT
-            nome_normalizado,
-            loja,
-            MIN(preco)
-        FROM produtos
-        WHERE nome_normalizado LIKE ?
-        GROUP BY nome_normalizado, loja
-        ORDER BY MIN(preco)
-    """, (f"%{termo}%",))
-
-    dados = cursor.fetchall()
-
-    conn.close()
-
-    return dados
-
-def melhor_oferta(termo):
-
-    conn = conectar()
-    cursor = conn.cursor()
-
-    termo = normalizar_nome(termo)
-
-    cursor.execute("""
-        SELECT
-            codigo,
-            nome,
-            loja,
-            MIN(preco) as preco,
-            link
-        FROM produtos
-        WHERE nome_normalizado LIKE ?
-        GROUP BY codigo
-        ORDER BY preco ASC
-    """, (f"%{termo}%",))
-
-    resultado = cursor.fetchone()
-
-    conn.close()
-
-    return resultado
-
-#def historico_precos(termo):
-
-    conn = conectar()
-    cursor = conn.cursor()
-
-    termo = normalizar_nome(termo)
-
-    cursor.execute("""
-        SELECT
-            data_coleta,
-            loja,
-            preco
-        FROM produtos
-        WHERE nome_normalizado LIKE ?
-        ORDER BY data_coleta
-    """, (f"%{termo}%",))
-
-    dados = cursor.fetchall()
-
-    conn.close()
-
-    return dados
-
-#def detectar_quedas():
-
-    conn = conectar()
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        SELECT
-            nome_normalizado,
-            loja,
-            MIN(preco),
-            MAX(preco)
-        FROM produtos
-        GROUP BY nome_normalizado, loja
-        HAVING MIN(preco) < MAX(preco)
-        ORDER BY
-            (MAX(preco) - MIN(preco)) DESC
-    """)
-
-    dados = cursor.fetchall()
-
-    conn.close()
-
-    return dados
-
-#def buscar_por_codigo(codigo):
-
-    conn = conectar()
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        SELECT
-            nome,
-            loja,
-            preco,
-            link
-        FROM produtos
-        WHERE codigo = ?
-        ORDER BY preco
-    """, (codigo,))
-
-    dados = cursor.fetchall()
-
-    conn.close()
-
-    return dados
-
-#def melhor_oferta_codigo(codigo):
-
-    conn = conectar()
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        SELECT
-            nome,
-            loja,
-            preco,
-            link
-        FROM produtos
-        WHERE codigo = ?
-        ORDER BY preco ASC
-        LIMIT 1
-    """, (codigo,))
-
-    resultado = cursor.fetchone()
-
-    conn.close()
-
-    return resultado
-
 def buscar_produto_web(termo):
 
     conn = conectar()
@@ -316,12 +104,14 @@ def buscar_produto_web(termo):
             link
         FROM produtos p
         WHERE nome_normalizado LIKE ?
+        AND datetime(data_coleta) >= datetime('now', '-3 days')
         AND id = (
             SELECT MAX(id)
             FROM produtos
             WHERE codigo = p.codigo
             AND loja = p.loja
         )
+        LIMIT 300
     """, (f"%{termo}%",))
 
     dados = cursor.fetchall()
@@ -336,16 +126,27 @@ def buscar_produto_web(termo):
 
         nome = normalizar_nome(item[0])
 
+        # Ignorar somente kits
+        if "kit upgrade" in nome:
+            continue
+
         score = 0
 
         for palavra in termos_busca:
-
             if palavra in nome:
                 score += 1
+
+        # Exige todas as palavras pesquisadas
+        if score < len(termos_busca):
+            continue
 
         resultado_filtrado.append(
             (score, item)
         )
+
+    print("\nSCORES:")
+    for score, item in resultado_filtrado:
+        print(score, item[2], item[0][:80])
 
     resultado_filtrado.sort(
         key=lambda x: (-x[0], x[1][2])
@@ -355,6 +156,7 @@ def buscar_produto_web(termo):
     resultado_final = []
 
     for score, item in resultado_filtrado:
+
         chave = (
             item[0].lower().strip(),
             item[1]
@@ -362,8 +164,13 @@ def buscar_produto_web(termo):
 
         if chave in vistos:
             continue
+
         vistos.add(chave)
         resultado_final.append(item)
+
+    print("\nRESULTADOS FINAIS:")
+    for r in resultado_final:
+        print(r)
 
     return resultado_final
 
@@ -416,6 +223,133 @@ def melhores_ofertas_loja(termo):
 
     dados = cursor.fetchall()
 
+    print(dados)
+
     conn.close()
 
     return dados
+
+def limpar_historico_antigo(dias=30):
+
+    conn = conectar()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        DELETE FROM produtos
+        WHERE data_coleta < datetime(
+            'now',
+            ?
+        )
+    """, (f"-{dias} days",))
+
+    removidos = cursor.rowcount
+
+    conn.commit()
+    conn.close()
+
+    print(f"Registros removidos: {removidos}")
+
+    return removidos
+
+def verificar_queda_preco(codigo, loja):
+
+    conn = conectar()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT preco
+        FROM produtos
+        WHERE codigo = ?
+        AND loja = ?
+        ORDER BY id DESC
+        LIMIT 2
+    """, (codigo, loja))
+
+    dados = cursor.fetchall()
+
+    conn.close()
+
+    if len(dados) < 2:
+        return None
+
+    preco_atual = dados[0][0]
+    preco_anterior = dados[1][0]
+
+    if preco_atual < preco_anterior:
+
+        return {
+            "queda": round(
+                preco_anterior - preco_atual,
+                2
+            ),
+            "anterior": preco_anterior,
+            "atual": preco_atual
+        }
+
+    return None
+
+def alertas_queda_preco():
+
+    conn = conectar()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT DISTINCT
+            codigo,
+            loja
+        FROM produtos
+    """)
+
+    produtos = cursor.fetchall()
+
+    alertas = []
+
+    for codigo, loja in produtos:
+
+        cursor.execute("""
+            SELECT
+                nome,
+                preco
+            FROM produtos
+            WHERE codigo = ?
+            AND loja = ?
+            ORDER BY id DESC
+            LIMIT 2
+        """, (codigo, loja))
+
+        dados = cursor.fetchall()
+
+        if len(dados) < 2:
+            continue
+
+        nome = dados[0][0]
+
+        preco_atual = float(dados[0][1])
+        preco_anterior = float(dados[1][1])
+
+        if preco_atual < preco_anterior:
+
+            valor_queda = round(
+                preco_anterior - preco_atual,
+                2
+            )
+
+            alertas.append(
+                (
+                    codigo,
+                    nome,
+                    loja,
+                    preco_atual,
+                    preco_anterior,
+                    valor_queda
+                )
+            )
+
+    conn.close()
+
+    alertas.sort(
+        key=lambda x: x[5],
+        reverse=True
+    )
+
+    return alertas

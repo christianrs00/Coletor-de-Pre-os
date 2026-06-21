@@ -72,6 +72,39 @@
 
         </div>
 
+        {% if quedas %}
+
+        <div class="alertas">
+
+            <h2>🔥 Quedas de Preço</h2>
+
+            {% for item in quedas[:5] %}
+
+                <div class="alerta-item">
+
+                    <strong>{{ item[1] }}</strong>
+
+                    <br>
+
+                    {{ item[2] }}
+
+                    <br>
+
+                    Caiu de
+                    R$ {{ "%.2f"|format(item[4]) }}
+
+                    para
+
+                    R$ {{ "%.2f"|format(item[3]) }}
+
+                </div>
+
+            {% endfor %}
+
+        </div>
+
+        {% endif %}
+
         <div class="filtros">
 
             <button

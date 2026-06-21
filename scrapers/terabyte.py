@@ -117,8 +117,6 @@ def pesquisar(produto):
             except Exception as erro:
                 print("Erro item:", erro)
 
-        print("RESULTADOS:", len(resultados))
-
         return resultados
 
     except Exception as erro:

@@ -7,8 +7,11 @@ from database.banco import buscar_produto_web
 from servicos.coletor import atualizar_produto
 from database.banco import historico_grafico
 from database.banco import melhores_ofertas_loja
+from database.banco import alertas_queda_preco
+from database.banco import criar_tabelas
 
 
+criar_tabelas()
 app = Flask(__name__)
 
 @app.route("/")
@@ -25,9 +28,15 @@ def buscar():
 
     resultados = buscar_produto_web(produto)
 
+    print("\nRESULTADOS ENVIADOS PARA HTML:")
+    for r in resultados:
+        print(r)
+
     historico = historico_grafico(produto)
 
     ofertas_loja = melhores_ofertas_loja(produto)
+
+    quedas = alertas_queda_preco()
 
     economia = 0
 
@@ -41,11 +50,12 @@ def buscar():
             segundo_preco - melhor_preco,
             2
         )
-
+    print(resultados)
     return render_template(
         "resultados.html",
         produto=produto,
         resultados=resultados,
+         quedas = quedas,
         historico=historico,
         ofertas_loja = ofertas_loja,
         economia = economia,
